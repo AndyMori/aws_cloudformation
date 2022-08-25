@@ -1,0 +1,40 @@
+{
+"Description":  "This template creates the vpc.",
+
+
+"Parameters": {
+    "EnvironmentName": {
+        "Description": "basic tag information",
+        "Type": "String",
+        "Default": "standard"
+    },
+    "VpcCIDR": {
+        "Description": "standard CIDR",
+        "Type": "String",
+        "Default": "10.192.0.0/16"
+    }
+},
+
+
+
+"Resources": {
+    "VPC": {
+        "Type": "AWS::EC2::VPC",
+        "Properties": { 
+            "CidrBlock": {
+                "Ref": "VpcCIDR"
+            },
+            "EnableDnsSupport": true,
+            "EnableDnsHostnames": true,
+            "Tags": {
+                "Key": "Name",
+                "Value": {
+                    "Ref": "EnvironmentName"
+                }
+            }
+        }
+        
+    }
+
+}
+}
