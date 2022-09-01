@@ -1,0 +1,136 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'yet another test stack'
+Parameters:
+  # Default Provided Parameters from Serverless Pipeline
+  Environment:
+    Description: Name of the AWS deployment environment
+    Type: String
+    Default: rd
+  ProductIdentifier:
+    Description: Tag for the name of the product
+    Type: String
+    Default: 'abex-lite'
+  GroupOwner:
+    Description: Name of Group Owner e.g. ABE_Group
+    Type: String
+    Default: abex_group
+  LaunchUserEmail:
+    Description: Tag for email of person or resource that launched this instancee
+    Type: String
+    Default: gsbenham@mmm.com
+  VpcId:
+    Description: ID of the VPC where the Security Group will exist
+    Type: String
+    Default: 'vpc-039e507a'
+  PrivateSubnetAId:
+    Description: ID of the first private subnet you want to provision the servers into (e.g., subnet-a0246dcd)
+    Type: AWS::EC2::Subnet::Id
+    Default: 'subnet-deda9496'
+  PrivateSubnetBId:
+    Description: ID of the second private subnet you want to provision the servers into (e.g., subnet-a0246dcd)
+    Type: AWS::EC2::Subnet::Id
+    Default: 'subnet-96ae20cc'
+  # ActiveMQ EC2 Parameters
+  AmqAMI:
+    Description: The AMI id for creating a queue EC2
+    Type: String
+    Default: 'ami-0d5eff06f840b45e9'
+  AmqKeyPair:
+    Description: Key pair name for accessing the queue EC2
+    Type: String
+    Default: 'denali-team-dev'
+  AmqInstanceType:
+    Description: Instance size
+    Type: String
+    Default: "t3.nano"
+  IamInstanceProfile:
+    Description: Iam Role that will be used for the EC2 instances
+    Type: String
+    Default: DevBuilderRD-abe-queue-ProductRole-ProductSuiteInstanceProfile-70Y1OOKROMF1
+
+Resources:
+  #==========================================================
+  # ACTIVE MQ EC2
+  #==========================================================
+  #AmqInstanceProfile:
+  #  Type: 'AWS::IAM::InstanceProfile'
+  #  Properties:
+  #    Path: '/'
+  #    Roles: ['ADD-rd-abex-InstanceRole']
+
+##   /dev/xvda   8G
+## EBS
+
+  AmqEC2:
+    Type: 'AWS::EC2::Instance'
+    Properties:
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          echo "Yo"
+          sudo amazon-linux-extras install -y nginx1
+          sudo nginx
+      IamInstanceProfile: !Ref IamInstanceProfile
+      #IamInstanceProfile: "pr-abex-lite-pipeline-RDRoles-InstanceProfile-ADF7D6HF635D"
+      #IamInstanceProfile: "pr-abex-ec2-pipeline-RDRoles-InstanceProfile-OM4PBJP80RT3"
+      ImageId: !Ref AmqAMI
+      KeyName: !Ref AmqKeyPair
+      InstanceType: !Ref AmqInstanceType
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            Encrypted: true
+            DeleteOnTermination: true
+            VolumeSize: 8
+        #- DeviceName: /dev/sdf
+        #  Ebs:
+        #    VolumeType: 'io2'
+        #    Iops: !Ref AmqIOPs
+        #    VolumeSize: 100
+        #    DeleteOnTermination: false
+        #    Encrypted: false
+      SubnetId: !Ref PrivateSubnetAId
+      SecurityGroupIds:
+      - 'sg-092525619e4dd20e4'
+      Tags:
+      - Key: Name
+        Value: "a3lsazz_test"
+      - Key: GroupOwner
+        Value: !Ref 'GroupOwner'
+      - Key: Environment
+        Value: !Ref 'Environment'
+      - Key: ProductIdentifier
+        Value: !Ref 'ProductIdentifier'
+      - Key: LaunchUserEmail
+        Value: !Ref 'LaunchUserEmail'
+      - Key: OperatingSystem 
+        Value: 'Linux'
+      - Key: DivvyCloud_Start
+        Value: 'Never'
+      - Key: DivvyCloud_Stop
+        Value: 'Never'
+      - Key: ApplicationName
+        Value: 'bb-abex-lite'
+      - Key: ApplicationID
+        Value: '107'
+      - Key: AlternateEmail
+        Value: 'ssbartlett@mmm.com'
+      - Key: OwnerContact
+        Value: 'gsbenham@mmm.com'
+      - Key: ProductOwnerEmail
+        Value: 'gsbenham@mmm.com'
+      - Key: c7n_expires
+        Value: 'Never'
+      - Key: IsStig
+        Value: 'true'
+
+  #==========================================================
+  # SECURITY GROUPS
+  #==========================================================
+ 
+
+Outputs:
+  instanceId:
+    Description: Id of Instance
+    Value: !Ref AmqEC2
+
