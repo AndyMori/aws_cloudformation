@@ -10,6 +10,19 @@ Parameters:
     Default: "ProofOfConcept"
 
 Resources:
+  #MyLambdaLayer:
+  #  Type: AWS::Serverless::LayerVersion
+  #  Properties:
+  #    LayerName: !Sub '${Environment}-Layer'
+  #    ContentUri: ./layer/build
+  #    Description: "Slow me down."
+  #    CompatibleRuntimes:
+  #      - python3.8
+  #    RetentionPolicy: Delete
+  #  Metadata:
+  #    BuildMethod: python3.8
+
+
   MyFunction:
     Type: 'AWS::Serverless::Function'
     Properties:
@@ -19,9 +32,12 @@ Resources:
         import os
         def handler(event, context):
             print('did you execute')
+            # add_thing('i did execute')
             return {'body': 'Hello World!', 'statusCode': 200}
       Handler: index.handler
       AutoPublishAlias: live
+      #Layers:
+      #  - !Ref MyLambdaLayer
       Description: >-
         ABE Python Serverless Example
       MemorySize: 128
@@ -30,8 +46,8 @@ Resources:
         ApiEvent:
           Type: Api
           Properties:
-            Path: /
-            Method: get
+            Path: /{proxy+}
+            Method: any
             RestApiId:
               Ref: MyApi
       #VpcConfig:
@@ -39,7 +55,7 @@ Resources:
       #    - !Ref MySecurityGroup
       #  SubnetIds:
       #    #- !Ref PrivateSubnet
-      #    - !Ref PublicSubnet
+      #    - !Ref PublicSubnet 
 
   MyApi:
     Type: 'AWS::Serverless::Api'

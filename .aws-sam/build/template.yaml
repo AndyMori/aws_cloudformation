@@ -7,16 +7,44 @@ Parameters:
     Type: String
     Default: ProofOfConcept
 Resources:
+  MyLambdaLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName:
+        Fn::Sub: ${Environment}-Layer
+      ContentUri: MyLambdaLayer
+      Description: Slow me down.
+      CompatibleRuntimes:
+      - python3.8
+      RetentionPolicy: Delete
+    Metadata:
+      BuildMethod: python3.8
+      SamResourceId: MyLambdaLayer
   MyFunction:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName:
         Fn::Sub: ${Environment}-function-acc8vzz
       Runtime: python3.8
-      InlineCode: "def handler():\n    print 'did you execute'\n    return ('body':\
-        \ 'Hello World!', 'statusCode': 200)\n"
+      InlineCode: "import os\ndef handler(event, context):\n    print('did you execute')\n\
+        \    add_thing('i did execute')\n    return {'body': 'Hello World!', 'statusCode':\
+        \ 200}\n"
       Handler: index.handler
       AutoPublishAlias: live
+      Layers:
+      - Ref: MyLambdaLayer
       Description: ABE Python Serverless Example
       MemorySize: 128
       Timeout: 900
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /{proxy+}
+            Method: any
+            RestApiId:
+              Ref: MyApi
+  MyApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: prod
