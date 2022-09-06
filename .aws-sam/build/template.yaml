@@ -1,0 +1,22 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: -> A simple apigateway.
+Parameters:
+  Environment:
+    Description: An environment name that is prefixed to resource names
+    Type: String
+    Default: ProofOfConcept
+Resources:
+  MyFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName:
+        Fn::Sub: ${Environment}-function-acc8vzz
+      Runtime: python3.8
+      InlineCode: "def handler():\n    print 'did you execute'\n    return ('body':\
+        \ 'Hello World!', 'statusCode': 200)\n"
+      Handler: index.handler
+      AutoPublishAlias: live
+      Description: ABE Python Serverless Example
+      MemorySize: 128
+      Timeout: 900

@@ -1,0 +1,49 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+Description: ->
+  A simple apigateway.
+Parameters:
+  # Default Provided Parameters from Serverless Pipeline
+  Environment:
+    Description: An environment name that is prefixed to resource names
+    Type: String
+    Default: "ProofOfConcept"
+
+Resources:
+  MyFunction:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      FunctionName: !Sub '${Environment}-function-acc8vzz'
+      Runtime: python3.8
+      InlineCode: |
+        import os
+        def handler(event, context):
+            print('did you execute')
+            return {'body': 'Hello World!', 'statusCode': 200}
+      Handler: index.handler
+      AutoPublishAlias: live
+      Description: >-
+        ABE Python Serverless Example
+      MemorySize: 128
+      Timeout: 900
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /
+            Method: get
+            RestApiId:
+              Ref: MyApi
+      #VpcConfig:
+      #  SecurityGroupIds:
+      #    - !Ref MySecurityGroup
+      #  SubnetIds:
+      #    #- !Ref PrivateSubnet
+      #    - !Ref PublicSubnet
+
+  MyApi:
+    Type: 'AWS::Serverless::Api'
+    Properties:
+      StageName: prod
+      
+      

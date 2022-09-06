@@ -1,68 +1,176 @@
 AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
 Description: 'yet another test stack'
 Parameters:
   # Default Provided Parameters from Serverless Pipeline
   Environment:
-    Description: Name of the AWS deployment environment
+    Description: An environment name that is prefixed to resource names
     Type: String
-    Default: rd
-  ProductIdentifier:
-    Description: Tag for the name of the product
+    Default: "ProofOfConcept"
+
+  VpcCIDR:
+    Description: Please enter the IP range (CIDR notation) for this VPC
     Type: String
-    Default: 'abex-lite'
-  GroupOwner:
-    Description: Name of Group Owner e.g. ABE_Group
+    Default: 10.192.0.0/16
+
+  PublicSubnetCIDR:
+    Description: Please enter the IP range (CIDR notation) for the public subnet in the first Availability Zone
     Type: String
-    Default: abex_group
-  LaunchUserEmail:
-    Description: Tag for email of person or resource that launched this instancee
+    Default: 10.192.10.0/24
+
+  PrivateSubnetCIDR:
+    Description: Please enter the IP range (CIDR notation) for the private subnet in the first Availability Zone
     Type: String
-    Default: amoriarty@mmm.com
-  VpcId:
-    Description: ID of the VPC where the Security Group will exist
-    Type: String
-    Default: 'vpc-039e507a'
-  PrivateSubnetAId:
-    Description: ID of the first private subnet you want to provision the servers into (e.g., subnet-a0246dcd)
-    Type: AWS::EC2::Subnet::Id
-    Default: 'subnet-deda9496'
-  PrivateSubnetBId:
-    Description: ID of the second private subnet you want to provision the servers into (e.g., subnet-a0246dcd)
-    Type: AWS::EC2::Subnet::Id
-    Default: 'subnet-96ae20cc'
+    Default: 10.192.20.0/24
+
+  # ProductIdentifier:
+  #   Description: Tag for the name of the product
+  #   Type: String
+  #   Default: 'abex-lite'
+  # GroupOwner:
+  #   Description: Name of Group Owner e.g. ABE_Group
+  #   Type: String
+  #   Default: abex_group
+  # LaunchUserEmail:
+  #   Description: Tag for email of person or resource that launched this instancee
+  #   Type: String
+  #   Default: amoriarty@mmm.com
+  # VpcId:
+  #   Description: ID of the VPC where the Security Group will exist
+  #   Type: String
+  #   Default: 'vpc-039e507a'
+  # PrivateSubnetAId:
+  #   Description: ID of the first private subnet you want to provision the servers into (e.g., subnet-a0246dcd)
+  #   Type: AWS::EC2::Subnet::Id
+  #   Default: 'subnet-deda9496'
+  # PrivateSubnetBId:
+  #   Description: ID of the second private subnet you want to provision the servers into (e.g., subnet-a0246dcd)
+  #   Type: AWS::EC2::Subnet::Id
+  #   Default: 'subnet-96ae20cc'
   # ActiveMQ EC2 Parameters
-  AmqAMI:
-    Description: The AMI id for creating a queue EC2
-    Type: String
-    Default: 'ami-0d5eff06f840b45e9'
-  AmqKeyPair:
-    Description: Key pair name for accessing the queue EC2
-    Type: String
-    Default: 'denali-team-dev'
-  AmqInstanceType:
-    Description: Instance size
-    Type: String
-    Default: "t3.nano"
-  IamInstanceProfile:
-    Description: Iam Role that will be used for the EC2 instances
-    Type: String
-    Default: DevBuilderRD-abe-queue-ProductRole-ProductSuiteInstanceProfile-70Y1OOKROMF1
+  # AmqAMI:
+  #   Description: The AMI id for creating a queue EC2
+  #   Type: String
+  #   Default: 'ami-0d5eff06f840b45e9'
+  # AmqKeyPair:
+  #   Description: Key pair name for accessing the queue EC2
+  #   Type: String
+  #   Default: 'denali-team-dev'
+  # AmqInstanceType:
+  #   Description: Instance size
+  #   Type: String
+  #   Default: "t3.nano"
+  # IamInstanceProfile:
+  #   Description: Iam Role that will be used for the EC2 instances
+  #   Type: String
+  #   Default: DevBuilderRD-abe-queue-ProductRole-ProductSuiteInstanceProfile-70Y1OOKROMF1
 
 Resources:
-  #==========================================================
-  # ACTIVE MQ EC2
-  #==========================================================
-  #AmqInstanceProfile:
-  #  Type: 'AWS::IAM::InstanceProfile'
-  #  Properties:
-  #    Path: '/'
-  #    Roles: ['ADD-rd-abex-InstanceRole']
+######################################################
+###   VPC Stuff
+######################################################
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCIDR
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: !Ref Environment
 
-##   /dev/xvda   8G
-## EBS
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Ref Environment
+
+  InternetGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref VPC
+
+  PublicSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: !Select [ 0, !GetAZs '' ]
+      CidrBlock: !Ref PublicSubnetCIDR
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: !Sub ${Environment} Public Subnet
+
+  #PrivateSubnet:
+  #  Type: AWS::EC2::Subnet
+  #  Properties:
+  #    VpcId: !Ref VPC
+  #    AvailabilityZone: !Select [ 0, !GetAZs  '' ]
+  #    CidrBlock: !Ref PrivateSubnetCIDR
+  #    MapPublicIpOnLaunch: false
+  #    Tags:
+  #      - Key: Name
+  #        Value: !Sub ${Environment} Private Subnet
+
+  #NatGatewayEIP:
+  #  Type: AWS::EC2::EIP
+  #  DependsOn: InternetGatewayAttachment
+  #  Properties:
+  #    Domain: vpc
+
+  #NatGateway:
+  #  Type: AWS::EC2::NatGateway
+  #  Properties:
+  #    AllocationId: !GetAtt NatGatewayEIP.AllocationId
+  #    SubnetId: !Ref PublicSubnet
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Name
+          Value: !Sub ${Environment} Public Routes
+
+  PublicSubnetRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      SubnetId: !Ref PublicSubnet
+
+  #PrivateRouteTable:
+  #  Type: AWS::EC2::RouteTable
+  #  Properties:
+  #    VpcId: !Ref VPC
+  #    Tags:
+  #      - Key: Name
+  #        Value: !Sub ${Environment} Private Routes 
+
+  #DefaultPrivateRoute:
+  #  Type: AWS::EC2::Route
+  #  Properties:
+  #    RouteTableId: !Ref PrivateRouteTable
+  #    DestinationCidrBlock: 0.0.0.0/0
+  #    NatGatewayId: !Ref NatGateway
+
+  #PrivateSubnetRouteTableAssociation:
+  #  Type: AWS::EC2::SubnetRouteTableAssociation
+  #  Properties:
+  #    RouteTableId: !Ref PrivateRouteTable
+  #    SubnetId: !Ref PrivateSubnet
+
+  NoIngressSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: "no-ingress-sg"
+      GroupDescription: "Security group with no ingress rule"
+      VpcId: !Ref VPC
+
   ServerlessApiLogGroup:
     Type: AWS::Logs::LogGroup
-    DependsOn: ServerlessApi
+    DependsOn: MyServerlessAPI
     Properties:
       LogGroupName: !Sub ${Environment}-apigateway-accesslogs
       RetentionInDays: 7
@@ -70,15 +178,15 @@ Resources:
   MySecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      VpcId: !Sub '${VpcId}'
+      VpcId: !Ref VPC
       GroupDescription: "Manage access to/from Lambda"
       SecurityGroupEgress:
-        -   CidrIp: 0.0.0.0/0
+        CidrIp: 0.0.0.0/0
         IpProtocol: tcp
         FromPort: 1
         ToPort: 65535
       SecurityGroupIngress:
-        -   CidrIp: 0.0.0.0/0
+        CidrIp: 0.0.0.0/0
         IpProtocol: tcp
         FromPort: 1
         ToPort: 65535
@@ -87,120 +195,99 @@ Resources:
     Type: 'AWS::Serverless::Function'
     Properties:
       FunctionName: !Sub '${Environment}-function-acc8vzz'
-      Handler: index.lambda_handler
       Runtime: python3.8
       InlineCode: |
-        import sys
-        from io import StringIO
-        def lambda_handler(event, context):
-        # Get code from payload
-            code = event['answer']
-            test_code = code + '\nprint(sum(1,1))'
-        # Capture stdout
-            buffer = StringIO()
-            sys.stdout = buffer
-        # Execute code
-        try:
-            exec(test_code)
-        except:
-            return False
-        # Return stdout
-            sys.stdout = sys.stdout
-        # Check
-        if int(buffer.getvalue()) == 2:
-            return True
-        return False
+        def handler(event, context):
+            return ('body': 'Hello World!', 'statusCode': 200)
       Handler: api.handler
       AutoPublishAlias: live
       Description: >-
         ABE Python Serverless Example
       MemorySize: 128
       Timeout: 900
-      Role: !Ref IamServerlessProfile
       VpcConfig:
         SecurityGroupIds:
           - !Ref MySecurityGroup
         SubnetIds:
-          - !Ref PrivateSubnetAId
-          - !Ref PrivateSubnetBId
-      Environment:
-        Variables:
-          AWS_ENV: !Ref Environment
-      Events:
-        GetResource:
-          Type: Api
-          Properties:
-            Path: /{proxy+}
-            Method: any
-            RestApiId:
-              Ref: MyServerlessAPI
+          #- !Ref PrivateSubnet
+          - !Ref PublicSubnet
+      # Environment:
+      #   Variables:
+      #     AWS_ENV: !Ref Environment
+      # Events:
+      #   GetResource:
+      #     Type: Api
+      #     Properties:
+      #       Path: /{proxy+}
+      #       Method: any
+      #       RestApiId:
+      #         Ref: MyServerlessAPI
 
   MyServerlessAPI:
-    Type: 'AWS::Serverless::API'
+    Type: 'AWS::Serverless::Api'
+    DependsOn: MyFunction
     Properties:
-      EndpointConfiguration:
-            Type: PRIVATE
-          StageName: prod
-          MethodSettings:
-            - HttpMethod: '*'
-              DataTraceEnabled: true
-              LoggingLevel: INFO
-              MetricsEnabled: true
-              ResourcePath: /*
-          AccessLogSetting:
-            DestinationArn: !Sub '${ServerlessApiLogGroup.Arn}'
-            Format: '{
-                        "requestId": "$context.requestId",
-                        "sourceIp": "$context.identity.sourceIp",
-                        "requestTime": "$context.requestTime",
-                        "httpMethod": "$context.httpMethod",
-                        "path": "$context.path",
-                        "protocol": "$context.protocol",
-                        "status": $context.status,
-                        "responseLatency": $context.responseLatency,
-                        "responseLength": "$context.responseLength",
-                        "integrationRequestId": "$context.integration.requestId",
-                        "functionResponseStatus": "$context.integration.status",
-                        "integrationLatency": "$context.integration.latency",
-                        "integrationServiceStatus": "$context.integration.integrationStatus"
-                       }'         
-          DefinitionBody:
-              swagger: 2.0
-              info:
-                version: "1.0"
-                title: !Sub "${Environment}-acc8vzz-test-api"
-              basePath: "/restapis"
-              schemes:
-              - "https"
-              paths:
-                /{proxy+}:
-                  x-amazon-apigateway-any-method:
-                    responses: {}
-                    x-amazon-apigateway-integration:
-                      uri:
-                        Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ServerlessApi.Arn}/invocations
-                      passthroughBehavior: "when_no_match"
-                      httpMethod: "POST"
-                      type: aws_proxy
-      Tags:
-      - Key: Name
-        Value: "acc8vzz_test"
-      - Key: GroupOwner
-        Value: !Ref 'GroupOwner'
-      - Key: Environment
-        Value: !Ref 'Environment'
-      - Key: ApplicationName
-        Value: 'bb-abex-lite'
-      - Key: ApplicationID
-        Value: '107'
+      StageName: Prod
+      MethodSettings:
+        - ResourcePath: /*
+          HttpMethod: '*'
+          DataTraceEnabled: true
+          LoggingLevel: INFO
+          MetricsEnabled: true
+      AccessLogSetting:
+        DestinationArn: !Sub '${ServerlessApiLogGroup.Arn}'
+        Format: '{
+                    "requestId": "$context.requestId",
+                    "sourceIp": "$context.identity.sourceIp",
+                    "requestTime": "$context.requestTime",
+                    "httpMethod": "$context.httpMethod",
+                    "path": "$context.path",
+                    "protocol": "$context.protocol",
+                    "status": $context.status,
+                    "responseLatency": $context.responseLatency,
+                    "responseLength": "$context.responseLength",
+                    "integrationRequestId": "$context.integration.requestId",
+                    "functionResponseStatus": "$context.integration.status",
+                    "integrationLatency": "$context.integration.latency",
+                    "integrationServiceStatus": "$context.integration.integrationStatus"
+                   }'         
+      DefinitionBody:
+        swagger: 2.0
+        info:
+          version: "1.0"
+          title: !Sub "${Environment}-acc8vzz-test-api"
+        basePath: "/restapis"
+        schemes:
+        - "https"
+        paths:
+          /{proxy+}:
+            x-amazon-apigateway-any-method:
+              responses: {}
+              x-amazon-apigateway-integration:
+                uri:
+                  Fn::Sub: arn:aws:apigateway:us-east-2:lambda:path/2015-03-31/functions/${MyFunction.Arn}/invocations
+                passthroughBehavior: "when_no_match"
+                httpMethod: "GET"
+                type: aws_proxy
+  #    Tags:
+  #     - Key: Name
+  #       Value: "acc8vzz_test"
+  #     - Key: GroupOwner
+  #       Value: !Ref 'GroupOwner'
+  #     - Key: Environment
+  #       Value: !Ref 'Environment'
+  #     - Key: ApplicationName
+  #       Value: 'bb-abex-lite'
+  #     - Key: ApplicationID
+  #       Value: '107'
 
   #==========================================================
   # SECURITY GROUPS
   #==========================================================
  
 
-Outputs:
-  instanceId:
-    Description: Id of Instance
-    Value: !Ref MyServerlessAPI
+# Outputs:
+#   instanceId:
+#     Description: Id of Instance
+#     Value: !Ref MyServerlessAPI
 
