@@ -21,6 +21,26 @@ Resources:
   #    RetentionPolicy: Delete
   #  Metadata:
   #    BuildMethod: python3.8
+  ServerlessApiLogGroup:
+    Type: AWS::Logs::LogGroup
+    DependsOn: MyApi
+    Properties:
+      LogGroupName: !Sub ${Environment}-apigateway-accesslogs
+      RetentionInDays: 1
+
+  # ApiRole:
+  #  Type: AWS::IAM::Role
+  #  Properties:
+  #    AssumeRolePolicyDocument: 
+  #      Version: "2012-10-17"
+  #      Statement:
+  #        - Effect: Allow
+  #          Sid: 'serverlessApiTestingAcc8vzz'
+  #          Resource: '*'
+  #          Action: 
+  #            - 'log*'
+  #            - 'execute-api*'
+  #            - 'lambda*'
 
 
   MyFunction:
@@ -31,8 +51,7 @@ Resources:
       InlineCode: |
         import os
         def handler(event, context):
-            print('did you execute')
-            # add_thing('i did execute')
+            print('did you execute, correctly')
             return {'body': 'Hello World!', 'statusCode': 200}
       Handler: index.handler
       AutoPublishAlias: live
@@ -46,8 +65,8 @@ Resources:
         ApiEvent:
           Type: Api
           Properties:
-            Path: /{proxy+}
-            Method: any
+            Path: /
+            Method: get
             RestApiId:
               Ref: MyApi
       #VpcConfig:
@@ -61,5 +80,28 @@ Resources:
     Type: 'AWS::Serverless::Api'
     Properties:
       StageName: prod
-      
+      MethodSettings:
+        - ResourcePath: /*
+          HttpMethod: '*'
+          DataTraceEnabled: true
+          LoggingLevel: INFO
+          MetricsEnabled: true
+      AccessLogSetting:
+        DestinationArn: !Sub '${ServerlessApiLogGroup.Arn}'
+        Format: '{
+                    "requestId": "$context.requestId",
+                    "sourceIp": "$context.identity.sourceIp",
+                    "requestTime": "$context.requestTime",
+                    "httpMethod": "$context.httpMethod",
+                    "path": "$context.path",
+                    "protocol": "$context.protocol",
+                    "status": $context.status,
+                    "responseLatency": $context.responseLatency,
+                    "responseLength": "$context.responseLength",
+                    "integrationRequestId": "$context.integration.requestId",
+                    "functionResponseStatus": "$context.integration.status",
+                    "integrationLatency": "$context.integration.latency",
+                    "integrationServiceStatus": "$context.integration.integrationStatus"
+                   }'
+    
       
