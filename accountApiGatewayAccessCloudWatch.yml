@@ -25,4 +25,4 @@ Resources:
               - 'lambda*'
             Principal:
               Service:
-                - "apigateway.amazonaws.com"
+                - "*"
