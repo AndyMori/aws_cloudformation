@@ -1,0 +1,28 @@
+# stack name iamApi4CW
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+Description: 'creates the IAM role to give API Gateway access to cloudwatch for account.'
+Parameters:
+  # Default Provided Parameters from Serverless Pipeline
+  Environment:
+    Description: An environment name that is prefixed to resource names
+    Type: String
+    Default: "ProofOfConcept"
+
+Resources:
+  ApiRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument: 
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Sid: 'apiGatewayAllPermissions'
+            Resource: '*'
+            Action: 
+              - 'logs*'
+              - 'execute-api*'
+              - 'lambda*'
+            Principal:
+              Service:
+                - "apigateway.amazonaws.com"
